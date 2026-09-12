@@ -39,24 +39,32 @@ flowchart TD
     classDef infra fill:#ffe0b2,stroke:#f57c00,stroke-width:2px;
 
     %% Component Elements
-    User["👤 User / Client Request"] :::client
-    API["⚙️ FastAPI HTTP Endpoint Layer"] :::runtime
+    User["User / Client Request"]
+    API["FastAPI HTTP Endpoint Layer"]
+    Router["Resilient Dual-LLM Router Service BaseLLMService Interface"]
     
-    subgraph GraphEngine ["🔄 LangGraph State Orchestration Pipeline"]
+    %% Style Binding Blocks
+    class User client;
+    class API runtime;
+    class Router router;
+
+    subgraph GraphEngine ["LangGraph State Orchestration Pipeline"]
         StartNode((START))
-        SearchNode["🔍 SearXNG Search Node<br/>(Retries 1-3)"] :::workflow
-        SMSNode["🤖 LLM SMS Summary Node<br/>(Character Constraint Verification)"] :::workflow
-        KBNode["📚 LLM Knowledge Base Node<br/>(Parametric Fallback Passer)"] :::workflow
-        StaticNode["🚨 Static Circuit Breaker<br/>(Zero-Dependency Hard Stop)"] :::workflow
+        SearchNode["SearXNG Search Node Retries 1-3"]
+        SMSNode["LLM SMS Summary Node Character Constraint Verification"]
+        KBNode["LLM Knowledge Base Node Parametric Fallback Passer"]
+        StaticNode["Static Circuit Breaker Zero-Dependency Hard Stop"]
         EndNode((END))
+        
+        class SearchNode,SMSNode,KBNode,StaticNode workflow;
     end
 
-    Router["🔀 Resilient Dual-LLM Router Service<br/>(BaseLLMService Interface)"] :::router
-    
-    subgraph ExternalServices ["🐳 Containerized Infrastructure Nodes"]
-        SearXNG["🐋 SearXNG Instance<br/>(Docker Port 8080)"] :::infra
-        OpenAI["☁️ OpenAI Cloud Gateway<br/>(Primary gpt-4o-mini)"] :::infra
-        Ollama["💻 Ollama Local Daemon<br/>(Fallback llama3.2:3b)"] :::infra
+    subgraph ExternalServices ["Containerized Infrastructure Nodes"]
+        SearXNG["SearXNG Instance Docker Port 8080"]
+        OpenAI["OpenAI Cloud Gateway Primary gpt-4o-mini"]
+        Ollama["Ollama Local Daemon Fallback llama3.2:3b"]
+        
+        class SearXNG,OpenAI,Ollama infra;
     end
 
     %% Workflow Connectivity Matrix
