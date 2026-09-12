@@ -1,118 +1,156 @@
-# Resilient Async LangGraph Search Assistant
+# SMS-AI-Websearch
 
-An enterprise-grade, asynchronous AI orchestration engine powered by **FastAPI** and **LangGraph**. This engine executes multi-engine web search queries through a local **SearXNG** instance and aggregates results into strict, character-capped SMS-ready payloads. 
+![GitHub stars](https://img.shields.io/github/stars/coolomya/SMS-AI-Websearch?style=for-the-badge&logo=github) ![GitHub forks](https://img.shields.io/github/forks/coolomya/SMS-AI-Websearch?style=for-the-badge&logo=github) ![GitHub issues](https://img.shields.io/github/issues/coolomya/SMS-AI-Websearch?style=for-the-badge&logo=github) ![Last commit](https://img.shields.io/github/last-commit/coolomya/SMS-AI-Websearch?style=for-the-badge&logo=github)
 
-The architecture features a resilient **Layered Core Pattern** built with dynamic failovers: utilizing **OpenAI** cloud infrastructure as the primary execution engine with a graceful cascade down to a localized **Ollama** engine if cloud connections encounter network faults, authentication breaks, or strict layout rejections.
+## 📑 Table of Contents
 
----
+- [Description](#description)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Quick Start](#quick-start)
+- [Environment Variables](#environment-variables)
+- [Key Dependencies](#key-dependencies)
+- [Project Structure](#project-structure)
+- [Development Setup](#development-setup)
+- [Contributors](#contributors)
+- [Contributing](#contributing)
 
-## 🏗️ Architectural Overview & Design Patterns
+## 📝 Description
 
-To deliver clear separation of concerns (SoC), decoupling metrics, and production stability, the monolithic core has been refactored into isolated functional boundaries:
+SMS-AI-Websearch — a backend api built with FastAPI, Python.
 
-```text
-       [ FastAPI Client Request Layer ]
-                      │
-                      ▼
-          [ LangGraph Engine State ]
-                      │
-         ┌────────────┴────────────┐
-         ▼                         ▼
-  [ SearXNG Node ]        [ LLM Summary Node ]
-         │                         │
-         ▼                         ▼
-[ Infrastructure Client ]   [ Resilient LLM Router ]
-                            ┌──────┴──────┐
-                            ▼             ▼
-                       [ OpenAI ] ──► [ Ollama ]
-                     (Primary Cloud)  (Local Fallback)
+## 🛠️ Tech Stack
+
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white) ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+
+**Notable libraries:** OpenAI, Uvicorn
+
+## 🏗️ Architecture
+
+A high-level view of how the main pieces fit together:
+
+```mermaid
+flowchart TD
+    User["👤 User / Browser"]
+    API["⚙️ FastAPI"]
+    User --> API
+    EXT0["🔌 OpenAI"]
+    API --> EXT0
 ```
 
-### Key Engineering Patterns Implemented:
-* **Interface-Driven Component Strategy:** LLM integrations inherit from a unified abstract interface (`BaseLLMService`), making component swaps or third-party unit-mocking straightforward without breaking the runtime workflow.
-* **Autonomous Resilience Loop (LangGraph Transitions):** The state machine evaluates data structures iteratively via LLM-backed judgment edges. If payload evaluations fail quality checks, it dynamically modifies parameters (e.g., swapping search engines from commercial arrays to isolated encyclopaedic clusters like Wikipedia) and self-heals over cyclical feedback loops.
-* **Non-Blocking Thread Concurrency:** Local execution models (Ollama) carry blocking synchronous IO signatures. These processing blocks are offloaded to isolated asynchronous event executors (`loop.run_in_executor`) to prevent engine-thread starvation and keep FastAPI serving throughput smooth.
-* **Dual-Stream Rolling Auditing:** Logs are multiplexed into a dedicated CLI terminal context and a standard automated rotating file buffer to enable auditing while avoiding systemic disk usage issues.
+## ⚡ Quick Start
 
----
-
-## 📂 Repository Directory Layout
-
-```text
-search-assistant/
-│
-├── config/
-│   ├── settings.py          # Centralized configuration via pydantic-settings
-│   └── logging_config.py    # Non-duplicating dual-stream logger bootstrapper
-│
-├── graph/
-│   ├── state.py             # Strongly-typed LangGraph State Schema
-│   ├── nodes.py             # Functional business process action handlers
-│   ├── edges.py             # Conditional structural evaluation routing logic
-│   └── workflow.py          # Framework state construction and compilation
-│
-├── services/
-│   ├── search/
-│   │   └── searxng.py       # Client network interface wrapper for SearXNG
-│   └── llm/
-│       ├── base.py          # Structural Abstract Base Class for LLM abstractions
-│       ├── openai_svc.py    # Primary OpenAI Integration Layer
-│       ├── ollama_svc.py    # Fallback Local Ollama Driver
-│       └── router.py        # Centralized Cascade Selection Manager
-│
-├── api/
-│   └── routes.py            # Restful API endpoints pointing to the compiled state graph
-│
-├── .env.example             # Clean configuration template for deployments
-├── main.py                  # Operational server bootstrapper
-└── requirements.txt         # Pinned operational application dependencies
-```
-
----
-
-## 🚀 Quick Start & Installation
-
-### 1. Prerequisites
-Ensure you have Python 3.10+ installed along with a local running instance of **SearXNG** and **Ollama**.
-
-### 2. Dependency Setup
-Clone the repository and install all engine dependencies within an isolated virtual environment:
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows use: venv\Scripts\activate
+
+# 1. Clone the repository
+git clone https://github.com/coolomya/SMS-AI-Websearch.git
+
+# 2. Create & activate a virtualenv
+python -m venv venv && source venv/bin/activate
+
+# 3. Install dependencies
 pip install -r requirements.txt
-```
 
-### 3. Environment Allocation
-Initialize your localized runtime parameters by mirroring the deployment template:
-```bash
+# 4. Configure environment
 cp .env.example .env
-```
-Open `.env` and assign your personal `OPENAI_API_KEY`. If no key is attached, the execution layers will automatically route down to local **Ollama** runtimes natively.
 
-### 4. Booting the ASGI Server
-Launch the production web engine directly using Uvicorn:
-```bash
+# Run the API
 uvicorn main:app --reload
 ```
-The application will mount an active server worker listener context pointing to: `http://127.0.0.1:8000`
+
+## 🔑 Environment Variables
+
+The following environment variables are required (see `.env.example`):
+
+```bash
+APP_TITLE=
+SEARXNG_URL=
+MAX_RETRY_COUNT=
+OPENAI_API_KEY=
+OPENAI_MODEL=
+OLLAMA_MODEL=
+```
+
+## 📦 Key Dependencies
+
+```
+langgraph: latest
+ollama: latest
+openai: latest
+fastapi: latest
+uvicorn: latest
+httpx: latest
+pydantic_settings: latest
+```
+
+## 📁 Project Structure
+
+```
+.
+├── .env.example
+├── api
+│   └── routes.py
+├── config
+│   ├── logging_config.py
+│   └── settings.py
+├── graph
+│   ├── edges.py
+│   ├── nodes.py
+│   ├── state.py
+│   └── workflow.py
+├── main.py
+├── old_tries
+│   ├── main.py
+│   ├── main_old.py
+│   ├── ollama_searxng.py
+│   └── webapp_ollama_searxng.py
+├── requirements.txt
+└── services
+    ├── llm
+    │   ├── base.py
+    │   ├── ollama_svc.py
+    │   ├── openai_svc.py
+    │   └── router.py
+    └── search
+        └── searxng.py
+```
+
+## 🛠️ Development Setup
+
+### Python
+1. Install Python (v3.10+ recommended)
+2. `python -m venv venv && source venv/bin/activate`  (Windows: `venv\Scripts\activate`)
+3. `pip install -r requirements.txt`
+
+## 👥 Contributors
+
+Thanks to everyone who has contributed to this project:
+
+<p align="left">
+<a href="https://github.com/coolomya" title="coolomya"><img src="https://avatars.githubusercontent.com/u/47236054?v=4&s=64" width="64" height="64" alt="coolomya" style="border-radius:50%" /></a>
+</p>
+
+[See the full list of contributors →](https://github.com/coolomya/SMS-AI-Websearch/graphs/contributors)
+
+## 👥 Contributing
+
+Contributions are welcome! Here's the standard flow:
+
+1. **Fork** the repository
+2. **Clone** your fork: `git clone https://github.com/coolomya/SMS-AI-Websearch.git`
+3. **Branch**: `git checkout -b feature/your-feature`
+4. **Commit**: `git commit -m 'feat: add some feature'`
+5. **Push**: `git push origin feature/your-feature`
+6. **Open** a pull request
+
+Please follow the existing code style and include tests for new behavior where applicable.
 
 ---
 
-## 🧪 API Validation & Interface Tracking
+<div align="center">
 
-You can track runtime operational steps and execution cascades through automated Swagger generation portals:
-* **Interactive Open-API UI:** Navigate to `http://127.0.0`
-* **Direct Pipeline Execution Call:**
-  ```text
-  GET http://127.0.0 is the Taj Mahal?
-  ```
+[![Made with ReadmeBuddy](https://img.shields.io/badge/Made%20with-ReadmeBuddy-8B5CFF?style=for-the-badge&logo=markdown&logoColor=white)](https://readmebuddy.com)
 
-### Sample Automated Fallback Logging Sequence:
-```text
-2026-09-12 16:30:30,142 [INFO] (nodes.py:13) - --- [Node] Querying SearXNG (Attempt 1) ---
-2026-09-12 16:30:32,116 [INFO] (edges.py:11) - --- [Edge Evaluation] Analyzing search context quality ---
-2026-09-12 16:30:32,116 [INFO] (router.py:24) - Evaluating via Primary LLM (OpenAI)...
-2026-09-12 16:30:32,116 [WARNING] (router.py:28) - Primary evaluation failed. Diverting evaluation to local Ollama...
-2026-09-12 16:30:38,973 [INFO] (ollama_svc.py:79) -    [Ollama Judge Process] Raw response received: 'TRUE'
-```
+<sub>Generate beautiful READMEs in seconds → <a href="https://readmebuddy.com">readmebuddy.com</a></sub>
+
+</div>
