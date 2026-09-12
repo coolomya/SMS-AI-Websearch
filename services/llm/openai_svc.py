@@ -36,8 +36,9 @@ class OpenAIService(BaseLLMService):
                 max_tokens=60,
                 temperature=0.3
             )
-            print(f">>openai rseponse : {response}")
-            raw_draft = response.choices.message.content.strip()
+            
+            # FIX: Access the first element of the choices list using index [0]
+            raw_draft = response.choices[0].message.content.strip()
             
             # Extract native SDK token metrics
             usage = response.usage
@@ -58,9 +59,9 @@ class OpenAIService(BaseLLMService):
             raise ValueError("OpenAI client missing active token initialization contexts.")
             
         if not content.strip():
-            return False
+            return False, {"prompt_tokens": 0, "completion_tokens": 0}
 
-        # FIX: Explicitly declare the system constant at the root of the execution scope block
+        # Explicitly declare the system constant at the root of the execution scope block
         system_instruction = (
             "You are a strict quality control judge system. Your job is to output exactly "
             "one word and nothing else. You are forbidden from writing explanations, notes, "
@@ -105,7 +106,9 @@ class OpenAIService(BaseLLMService):
                 max_tokens=10,
                 temperature=0.0
             )
-            verdict = response.choices.message.content.strip().upper()
+            
+            # FIX: Access the first element of the choices list using index [0]
+            verdict = response.choices[0].message.content.strip().upper()
             
             # Extract native SDK token metrics
             usage = response.usage
@@ -143,7 +146,11 @@ class OpenAIService(BaseLLMService):
                 max_tokens=60,
                 temperature=0.3
             )
-            return response.choices.message.content.strip()[:150], {
+            
+            # FIX: Access the first element of the choices list using index [0]
+            raw_draft = response.choices[0].message.content.strip()
+            
+            return raw_draft[:150], {
                 "prompt_tokens": response.usage.prompt_tokens,
                 "completion_tokens": response.usage.completion_tokens
             }
