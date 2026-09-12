@@ -101,24 +101,23 @@ flowchart TD
     OpenAI -.->|Fallback Failover Loop| Ollama
 ```
 
-
-                ┌──────────────────────┐
-                │   SMS Requestor      │
-                └──────────┬───────────┘
-                           │ SMS
-                           ▼
-                ┌──────────────────────┐
-                │ Android Phone        │
-                │ Automate             │
-                │ SIM / SMS Gateway    │
-                └──────────┬───────────┘
-                           │ HTTP
-                           │ LAN
-                           ▼
+                         ┌──────────────────────┐
+                         │   SMS Requestor      │
+                         └──────────┬───────────┘
+                                    │ SMS
+                                    ▼
+                         ┌──────────────────────┐
+                         │ Android Phone        │
+                         │ Automate              │
+                         │ SIM / SMS Gateway     │
+                         └──────────┬───────────┘
+                                    │ HTTP
+                                    │ LAN
+                                    ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    Local Laptop / Server                    │
 │                                                             │
-│  FastAPI → LangGraph → SearXNG → LLM Router → OpenAI/Ollama │
+│  FastAPI → LangGraph → SearXNG → LLM Router → OpenAI/Ollama│
 │                                                             │
 └──────────────────────────┬──────────────────────────────────┘
                            │ JSON
