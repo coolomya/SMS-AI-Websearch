@@ -29,104 +29,39 @@ SMS-AI-Websearch — a backend api built with FastAPI, Python.
 
 A high-level view of how the main pieces fit together:
 
+
+Yes. Here is the **Mermaid version of that exact architecture**, designed to work cleanly in GitHub README:
+
 ```mermaid
-flowchart TD
-    %% Base Styling Definitions
-    classDef client fill:#f9f9f9,stroke:#333,stroke-width:2px;
-    classDef runtime fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
-    classDef workflow fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
-    classDef router fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
-    classDef infra fill:#ffe0b2,stroke:#f57c00,stroke-width:2px;
+flowchart LR
+    Requestor["📱 SMS Requestor"]
 
-    %% Component Elements
-    User["User / Client Request"]
-    API["FastAPI HTTP Endpoint Layer"]
-    Router["Resilient Dual-LLM Router Service BaseLLMService Interface"]
-    
-    %% Style Binding Blocks
-    class User client;
-    class API runtime;
-    class Router router;
+    Android["📲 Android Phone<br/>Automate + SIM"]
 
-    subgraph GraphEngine ["LangGraph State Orchestration Pipeline"]
-        StartNode((START))
-        SearchNode["SearXNG Search Node Retries 1-3"]
-        SMSNode["LLM SMS Summary Node Character Constraint Verification"]
-        KBNode["LLM Knowledge Base Node Parametric Fallback Passer"]
-        StaticNode["Static Circuit Breaker Zero-Dependency Hard Stop"]
-        EndNode((END))
-        
-        class SearchNode,SMSNode,KBNode,StaticNode workflow;
+    subgraph Server["💻 Local Laptop / Server"]
+        direction LR
+
+        FastAPI["FastAPI"]
+        LangGraph["LangGraph"]
+        SearXNG["SearXNG"]
+        Router["LLM Router"]
+
+        OpenAI["OpenAI"]
+        Ollama["Ollama"]
+
+        FastAPI --> LangGraph
+        LangGraph --> SearXNG
+        SearXNG --> Router
+
+        Router --> OpenAI
+        Router --> Ollama
     end
 
-    subgraph ExternalServices ["Containerized Infrastructure Nodes"]
-        SearXNG["SearXNG Instance Docker Port 8080"]
-        OpenAI["OpenAI Cloud Gateway Primary gpt-4o-mini"]
-        Ollama["Ollama Local Daemon Fallback llama3.2:3b"]
-        
-        class SearXNG,OpenAI,Ollama infra;
-    end
-
-    %% Workflow Connectivity Matrix
-    User -->|GET /api/v1/search-assistant| API
-    API -->|ainvoke initial_state| StartNode
-    
-    StartNode --> SearchNode
-    SearchNode -->|Fetch Web Snippets| SearXNG
-    
-    %% Condition Edge Branching: Post Search Evaluation
-    SearchNode --> Edge1{Context Quality Pass?}
-    Edge1 -->|TRUE| SMSNode
-    Edge1 -->|FALSE & Count < Max| SearchNode
-    Edge1 -->|FALSE & Retries Blown| KBNode
-
-    %% Summary Logic Routing Pipeline
-    SMSNode -->|Evaluate Text Draft| Router
-    Router --> Edge2{Constraints Met?}
-    Edge2 -->|TRUE| EndNode
-    Edge2 -->|FALSE & Count < Max| SMSNode
-    Edge2 -->|FALSE & Retries Blown| KBNode
-
-    %% Recovery / Ultimate Fallback Architecture Path
-    KBNode -->|Invoke Parametric Query| Router
-    Router -->|If Models Live| EndNode
-    Router -.->|If Network Drops / Crash| StaticNode
-    StaticNode --> EndNode
-    
-    EndNode -->|JSON HTTP Payload Response| API
-    API --> User
-
-    %% LLM Component Binding Interoperability Matrix
-    Router -->|1. Primary Channel| OpenAI
-    OpenAI -.->|Fallback Failover Loop| Ollama
+    Requestor -->|"SMS Query"| Android
+    Android -->|"HTTP • Local LAN"| FastAPI
+    FastAPI -->|"JSON Response"| Android
+    Android -->|"SMS Response"| Requestor
 ```
-
-                         ┌──────────────────────┐
-                         │   SMS Requestor      │
-                         └──────────┬───────────┘
-                                    │ SMS
-                                    ▼
-                         ┌──────────────────────┐
-                         │ Android Phone        │
-                         │ Automate              │
-                         │ SIM / SMS Gateway     │
-                         └──────────┬───────────┘
-                                    │ HTTP
-                                    │ LAN
-                                    ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Local Laptop / Server                    │
-│                                                             │
-│  FastAPI → LangGraph → SearXNG → LLM Router → OpenAI/Ollama│
-│                                                             │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ JSON
-                           ▼
-                    Android / Automate
-                           │
-                           │ SMS
-                           ▼
-                    Original Requestor
 
 ## ⚡ Quick Start
 
