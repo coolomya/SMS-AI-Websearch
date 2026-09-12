@@ -27,3 +27,12 @@ class LLMRouter(BaseLLMService):
             # FIX: Fallback to local Ollama judge if OpenAI URL breaks or errors out
             logger.warning(f"Primary evaluation failed: {e}. Diverting evaluation to local Ollama...")
             return await self.fallback.evaluate_quality(query, content)
+
+    async def generate_from_knowledge_base(self, query: str) -> tuple[str, dict]:
+        try:
+            logger.info("Attempting Knowledge Base recovery pass via Primary LLM (OpenAI)...")
+            return await self.primary.generate_from_knowledge_base(query)
+        except Exception as e:
+            logger.warning(f"Primary Knowledge Base pass failed: {e}. Cascading down to local Ollama...")
+            return await self.fallback.generate_from_knowledge_base(query)
+

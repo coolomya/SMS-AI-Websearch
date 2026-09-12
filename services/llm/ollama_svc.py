@@ -89,3 +89,27 @@ class OllamaService(BaseLLMService):
         except Exception as e:
             logger.error(f"Local Ollama verification fallback execution fault: {str(e)}")
             return False
+
+    async def generate_from_knowledge_base(self, query: str) -> tuple[str, dict]:
+        system_prompt = (
+            "You are a helpful assistant answering from your internal knowledge base because live web search failed.\n"
+            "CRITICAL CONSTRAINTS:\n"
+            "1. Evaluate if the user query requires real-time/current information.\n"
+            "2. If it requires real-time data, reply exactly with: 'Sorry, I couldn't retrieve real-time data to safely process this request.'\n"
+            "3. If it is general knowledge, physics, history, or fiction (e.g., 'what is naruto'), answer directly.\n"
+            "4. The entire summary answer must be strictly under 150 characters total, exactly one sentence, plain text only."
+        )
+        
+        loop = asyncio.get_running_loop()
+        try:
+            response = await loop.run_in_executor(
+                None,
+                lambda: ollama.generate(model=self.model, system=system_prompt, prompt=f"User Query: {query}")
+            )
+            return response['response'].strip()[:150], {
+                "prompt_tokens": response.get("prompt_eval_count", 0),
+                "completion_tokens": response.get("eval_count", 0)
+            }
+        except Exception as e:
+            logger.error(f"Ollama Knowledge Base execution failed: {str(e)}")
+            raise e

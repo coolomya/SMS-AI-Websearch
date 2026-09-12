@@ -36,6 +36,7 @@ class OpenAIService(BaseLLMService):
                 max_tokens=60,
                 temperature=0.3
             )
+            print(f">>openai rseponse : {response}")
             raw_draft = response.choices.message.content.strip()
             
             # Extract native SDK token metrics
@@ -117,4 +118,35 @@ class OpenAIService(BaseLLMService):
             return "TRUE" in verdict, token_stats
         except Exception as e:
             logger.error(f"OpenAI library evaluation call failed: {str(e)}")
+            raise e
+
+    async def generate_from_knowledge_base(self, query: str) -> tuple[str, dict]:
+        if not self.client:
+            raise ValueError("OpenAI client missing active token initialization contexts.")
+
+        system_prompt = (
+            "You are a helpful assistant answering from your internal knowledge base because live web search failed.\n"
+            "CRITICAL CONSTRAINTS:\n"
+            "1. Evaluate if the user query requires real-time/current information (e.g., live weather, stock prices, today's news).\n"
+            "2. If it requires real-time data you do not possess, reply exactly with: 'Sorry, I couldn't retrieve real-time data to safely process this request.'\n"
+            "3. If it is general knowledge, physics, math, history, or fiction (e.g., 'what is naruto'), answer directly.\n"
+            "4. The entire summary answer must be strictly under 150 characters total, exactly one sentence, plain text only."
+        )
+
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"User Query: {query}"}
+                ],
+                max_tokens=60,
+                temperature=0.3
+            )
+            return response.choices.message.content.strip()[:150], {
+                "prompt_tokens": response.usage.prompt_tokens,
+                "completion_tokens": response.usage.completion_tokens
+            }
+        except Exception as e:
+            logger.error(f"OpenAI Knowledge Base execution failed: {str(e)}")
             raise e

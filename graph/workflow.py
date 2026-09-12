@@ -1,24 +1,18 @@
+# graph/workflow.py
 from langgraph.graph import StateGraph, START, END
 from graph.state import GraphState
-from graph.nodes import query_searXNG_node, llm_summary_sms_node
+from graph.nodes import query_searXNG_node, llm_summary_sms_node, llm_knowledge_base_node, static_default_sms_node
 from graph.edges import route_after_search, route_after_sms
 
-# Internal static node for quick execution handling on absolute failure
-async def static_default_sms_node(state: GraphState) -> dict:
-    last_draft = state.get("sms_output", "").strip()
-    if last_draft:
-        return {"sms_output": last_draft}
-    return {"sms_output": f"Sorry, I couldn't safely process your request for '{state['query']}' right now."}
-
-# Initialize and construct state architecture machine
 builder = StateGraph(GraphState)
 
-# Append computational functional nodes
+# 1. Register all structural processing nodes
 builder.add_node("search_node", query_searXNG_node)
 builder.add_node("sms_node", llm_summary_sms_node)
-builder.add_node("fallback_node", static_default_sms_node)
+builder.add_node("kb_fallback_node", llm_knowledge_base_node)
+builder.add_node("static_fallback_node", static_default_sms_node) # The ultimate safety line
 
-# Map edge connections
+# 2. Map structural execution edges
 builder.add_edge(START, "search_node")
 
 builder.add_conditional_edges(
@@ -27,7 +21,7 @@ builder.add_conditional_edges(
     {
         "generate_sms": "sms_node",
         "retry_search": "search_node",
-        "fallback": "fallback_node"
+        "fallback": "kb_fallback_node" # Route first to LLM knowledge base query
     }
 )
 
@@ -37,11 +31,22 @@ builder.add_conditional_edges(
     {
         "end": END,
         "retry_sms": "sms_node",
-        "fallback": "fallback_node"
+        "fallback": "kb_fallback_node" # Route first to LLM knowledge base query
     }
 )
 
-builder.add_edge("fallback_node", END)
+# 3. Handle downstream conditions from the knowledge base node
+builder.add_conditional_edges(
+    "kb_fallback_node",
+    # If the KB node successfully populated sms_output, exit graph. Else, go to static fallback.
+    lambda state: "end" if state.get("sms_output") else "static_critical",
+    {
+        "end": END,
+        "static_critical": "static_fallback_node"
+    }
+)
 
-# Compile framework architecture into single executable runtime object
+# 4. Terminal edge from static node to complete state loop
+builder.add_edge("static_fallback_node", END)
+
 compiled_graph = builder.compile()

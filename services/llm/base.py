@@ -10,3 +10,8 @@ class BaseLLMService(ABC):
     async def evaluate_quality(self, query: str, content: str) -> bool:
         """Asynchronously checks whether context documents or SMS outputs pass safety criteria."""
         pass
+
+    @abstractmethod
+    async def generate_from_knowledge_base(self, query: str) -> tuple[str, dict]:
+        """Generate answers using purely internal parameters, checking real-time constraints."""
+        pass
