@@ -80,8 +80,10 @@ pip install -r requirements.txt
 cp .env.example .env
 
 # Run the API
-uvicorn main:app --reload
+uvicorn main:app --reload --host 0.0.0.0
 ```
+
+Make sure to use 0.0.0.0 as host, otherwise api will not be accessible over same wifi network.
 
 ---
 
