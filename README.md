@@ -31,11 +31,66 @@ A high-level view of how the main pieces fit together:
 
 ```mermaid
 flowchart TD
-    User["👤 User / Browser"]
-    API["⚙️ FastAPI"]
-    User --> API
-    EXT0["🔌 OpenAI"]
-    API --> EXT0
+    %% Base Styling Definitions
+    classDef client fill:#f9f9f9,stroke:#333,stroke-width:2px;
+    classDef runtime fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef workflow fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
+    classDef router fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
+    classDef infra fill:#ffe0b2,stroke:#f57c00,stroke-width:2px;
+
+    %% Component Elements
+    User["👤 User / Client Request"] :::client
+    API["⚙️ FastAPI HTTP Endpoint Layer"] :::runtime
+    
+    subgraph GraphEngine ["🔄 LangGraph State Orchestration Pipeline"]
+        StartNode((START))
+        SearchNode["🔍 SearXNG Search Node<br/>(Retries 1-3)"] :::workflow
+        SMSNode["🤖 LLM SMS Summary Node<br/>(Character Constraint Verification)"] :::workflow
+        KBNode["📚 LLM Knowledge Base Node<br/>(Parametric Fallback Passer)"] :::workflow
+        StaticNode["🚨 Static Circuit Breaker<br/>(Zero-Dependency Hard Stop)"] :::workflow
+        EndNode((END))
+    end
+
+    Router["🔀 Resilient Dual-LLM Router Service<br/>(BaseLLMService Interface)"] :::router
+    
+    subgraph ExternalServices ["🐳 Containerized Infrastructure Nodes"]
+        SearXNG["🐋 SearXNG Instance<br/>(Docker Port 8080)"] :::infra
+        OpenAI["☁️ OpenAI Cloud Gateway<br/>(Primary gpt-4o-mini)"] :::infra
+        Ollama["💻 Ollama Local Daemon<br/>(Fallback llama3.2:3b)"] :::infra
+    end
+
+    %% Workflow Connectivity Matrix
+    User -->|GET /api/v1/search-assistant| API
+    API -->|ainvoke initial_state| StartNode
+    
+    StartNode --> SearchNode
+    SearchNode -->|Fetch Web Snippets| SearXNG
+    
+    %% Condition Edge Branching: Post Search Evaluation
+    SearchNode --> Edge1{Context Quality Pass?}
+    Edge1 -->|TRUE| SMSNode
+    Edge1 -->|FALSE & Count < Max| SearchNode
+    Edge1 -->|FALSE & Retries Blown| KBNode
+
+    %% Summary Logic Routing Pipeline
+    SMSNode -->|Evaluate Text Draft| Router
+    Router --> Edge2{Constraints Met?}
+    Edge2 -->|TRUE| EndNode
+    Edge2 -->|FALSE & Count < Max| SMSNode
+    Edge2 -->|FALSE & Retries Blown| KBNode
+
+    %% Recovery / Ultimate Fallback Architecture Path
+    KBNode -->|Invoke Parametric Query| Router
+    Router -->|If Models Live| EndNode
+    Router -.->|If Network Drops / Crash| StaticNode
+    StaticNode --> EndNode
+    
+    EndNode -->|JSON HTTP Payload Response| API
+    API --> User
+
+    %% LLM Component Binding Interoperability Matrix
+    Router -->|1. Primary Channel| OpenAI
+    OpenAI -.->|Fallback Failover Loop| Ollama
 ```
 
 ## ⚡ Quick Start
@@ -57,6 +112,32 @@ cp .env.example .env
 # Run the API
 uvicorn main:app --reload
 ```
+
+---
+
+## 🐳 External Infrastructure Services Setup
+
+### 1. Containerized SearXNG Engine
+Run a localized instance of SearXNG inside Docker:
+
+```bash
+docker run -d \
+  -p 8080:8080 \
+  --name local-searxng \
+  --restart unless-stopped \
+  -e SEARXNG_SETTINGS_URL=/etc/searxng/settings.yml \
+  searxng/searxng:latest
+```
+
+### 2. Local Ollama Inference Node
+Ensure Ollama is running locally and pull your target model weights:
+
+```bash
+ollama pull llama3.2:3b
+```
+
+---
+
 
 ## 🔑 Environment Variables
 
@@ -83,6 +164,19 @@ httpx: latest
 pydantic_settings: latest
 ```
 
+## 📁 Project Folder Layout
+
+```text
+.
+├── api/          # REST API endpoints & LLM sandbox routers
+├── config/       # Logging & centralized Pydantic settings
+├── graph/        # LangGraph states, nodes, edges & workflow builder
+├── services/     # LLM providers (OpenAI, Ollama, router) & SearXNG search client
+├── .env.example  # Configuration template
+├── main.py       # ASGI server initialization
+└── requirements.txt
+```
+
 ## 📁 Project Structure
 
 ```
@@ -99,11 +193,6 @@ pydantic_settings: latest
 │   ├── state.py
 │   └── workflow.py
 ├── main.py
-├── old_tries
-│   ├── main.py
-│   ├── main_old.py
-│   ├── ollama_searxng.py
-│   └── webapp_ollama_searxng.py
 ├── requirements.txt
 └── services
     ├── llm
