@@ -1,3 +1,4 @@
+# graph/edges.py
 import logging
 from graph.state import GraphState
 from config.settings import settings
@@ -10,38 +11,40 @@ async def route_after_search(state: GraphState) -> str:
     """Evaluates search results content structure using the LLM Router Judge."""
     logger.info("--- [Edge Evaluation] Analyzing search context quality ---")
     
-    is_valid = await llm_router.evaluate_quality(
+    # FIX: Unpack the tuple to get the boolean verdict separately from token usage maps
+    is_valid, _ = await llm_router.evaluate_quality(
         query=state["query"], 
         content=state["context"]
     )
     
     if is_valid:
-        logger.info("   [Edge Decision] Context verified. Proceeding to summary generation.")
+        logger.info("✅ [Judge Verdict] Context APPROVED. Proceeding to summary generation.")
         return "generate_sms"
         
     if state["search_retry_count"] >= settings.MAX_RETRY_COUNT:
-        logger.warning("   [Edge Decision] Search limits exceeded. Route directly to fallback output.")
+        logger.warning("❌ [Judge Verdict] Context REJECTED & search limits exceeded. Routing to LLM Knowledge Base...")
         return "fallback"
         
-    logger.info("   [Edge Decision] Context rejected. Retrying with updated engine map.")
+    logger.info("❌ [Judge Verdict] Context REJECTED. Retrying search query step...")
     return "retry_search"
 
 async def route_after_sms(state: GraphState) -> str:
     """Evaluates final SMS quality requirements (length limit, structure, syntax)."""
     logger.info("--- [Edge Evaluation] Analyzing generated SMS draft constraints ---")
     
-    is_valid = await llm_router.evaluate_quality(
+    # FIX: Unpack the tuple here as well
+    is_valid, _ = await llm_router.evaluate_quality(
         query=state["query"], 
         content=state["sms_output"]
     )
     
     if is_valid:
-        logger.info("   [Edge Decision] Output meets structural metrics. Terminating graph.")
+        logger.info("✅ [SMS Verdict] Draft APPROVED. Terminating graph state safely.")
         return "end"
         
     if state["llm_retry_count"] >= settings.MAX_RETRY_COUNT:
-        logger.warning("   [Edge Decision] LLM generation thresholds breached. Route to fallback execution.")
+        logger.warning("❌ [SMS Verdict] Draft REJECTED & retry limits breached. Escalating to Fallback...")
         return "fallback"
         
-    logger.info("   [Edge Decision] Draft failed requirements metrics. Executing re-generation pass.")
+    logger.info("❌ [SMS Verdict] Draft REJECTED. Triggering re-generation pass...")
     return "retry_sms"
