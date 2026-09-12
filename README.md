@@ -185,9 +185,9 @@ pydantic_settings: latest
 
 ## 📱 Android SMS Integration
 
-The project can optionally be accessed through an Android phone with a
-working SIM card. The Android device uses Automate by LlamaLab to receive
-SMS queries, forward them to the local FastAPI server over the LAN, and
+The project can be accessed through an Android phone with a
+working SIM card as a middleware. The Android device uses Automate by LlamaLab to receive
+SMS queries from non-android phone, forward them to the local FastAPI server over the LAN, and
 send the AI-generated response back via SMS.
 
 For the complete Android/Automate configuration and deployment instructions,
