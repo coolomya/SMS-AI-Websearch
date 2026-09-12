@@ -1,0 +1,7 @@
+langgraph
+ollama
+openai
+fastapi 
+uvicorn 
+httpx
+pydantic_settings
