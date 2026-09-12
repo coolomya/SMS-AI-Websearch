@@ -101,6 +101,34 @@ flowchart TD
     OpenAI -.->|Fallback Failover Loop| Ollama
 ```
 
+
+                ┌──────────────────────┐
+                │   SMS Requestor      │
+                └──────────┬───────────┘
+                           │ SMS
+                           ▼
+                ┌──────────────────────┐
+                │ Android Phone        │
+                │ Automate             │
+                │ SIM / SMS Gateway    │
+                └──────────┬───────────┘
+                           │ HTTP
+                           │ LAN
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Local Laptop / Server                    │
+│                                                             │
+│  FastAPI → LangGraph → SearXNG → LLM Router → OpenAI/Ollama │
+│                                                             │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ JSON
+                           ▼
+                    Android / Automate
+                           │
+                           │ SMS
+                           ▼
+                    Original Requestor
+
 ## ⚡ Quick Start
 
 ```bash
@@ -190,6 +218,8 @@ pydantic_settings: latest
 ```
 .
 ├── .env.example
+├── docs
+│   └── ANDROID_SETUP.md
 ├── api
 │   └── routes.py
 ├── config
@@ -218,6 +248,16 @@ pydantic_settings: latest
 1. Install Python (v3.10+ recommended)
 2. `python -m venv venv && source venv/bin/activate`  (Windows: `venv\Scripts\activate`)
 3. `pip install -r requirements.txt`
+
+## 📱 Android SMS Integration
+
+The project can optionally be accessed through an Android phone with a
+working SIM card. The Android device uses Automate by LlamaLab to receive
+SMS queries, forward them to the local FastAPI server over the LAN, and
+send the AI-generated response back via SMS.
+
+For the complete Android/Automate configuration and deployment instructions,
+see **[Android SMS Bridge Setup](docs/ANDROID_SETUP.md)**.
 
 ## 👥 Contributors
 
