@@ -4,6 +4,9 @@ from graph.workflow import compiled_graph
 from config.settings import settings 
 from services.llm.router import LLMRouter
 from pydantic import BaseModel
+import logging
+
+logger = logging.getLogger("search_assistant")
 
 router = APIRouter()
 
@@ -42,19 +45,20 @@ async def execute_search_assistant_pipeline(q: str = Query(..., description="The
         
         # Stream or invoke asynchronous execution through the engine graph layout
         final_state = await compiled_graph.ainvoke(initial_state)
-        
+        content={
+                        "status": "success",
+                        "query": final_state["query"],
+                        "sms_response": final_state["sms_output"],
+                        "metrics": {
+                            "search_retries": final_state["search_retry_count"],
+                            "llm_retries": final_state["llm_retry_count"],
+                            "total_prompt_tokens": final_state["total_prompt_tokens"],
+                            "total_completion_tokens": final_state["total_completion_tokens"]
+                        }
+                    }
+        logger.info(f"Responding : {content}")
         return JSONResponse(
-            content={
-                "status": "success",
-                "query": final_state["query"],
-                "sms_response": final_state["sms_output"],
-                "metrics": {
-                    "search_retries": final_state["search_retry_count"],
-                    "llm_retries": final_state["llm_retry_count"],
-                    "total_prompt_tokens": final_state["total_prompt_tokens"],
-                    "total_completion_tokens": final_state["total_completion_tokens"]
-                }
-            }
+            content
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Graph internal processing execution fault: {str(e)}")
