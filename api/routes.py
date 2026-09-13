@@ -1,18 +1,33 @@
 from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import JSONResponse
 from graph.workflow import compiled_graph
-
-# Add this endpoint to the bottom of api/routes.py
+from config.settings import settings 
 from services.llm.router import LLMRouter
 from pydantic import BaseModel
 
 router = APIRouter()
 
+def sanitize_query(text: str) -> str:
+    """Removes blacklisted words and condenses multiple lines into a single line."""
+    # Use the active configuration parameters
+    for word in settings.BANNED_WORDS:
+        text = text.replace(word, "")
+    
+    single_line_text = " ".join([line.strip() for line in text.splitlines() if line.strip()])
+    return single_line_text
+
 @router.get("/search-assistant", summary="Query State Graph Workflow Pipeline")
 async def execute_search_assistant_pipeline(q: str = Query(..., description="The query to process")):
     if not q.strip():
         raise HTTPException(status_code=400, detail="Query payload parameter cannot be left empty.")
-        
+
+    # Apply the cleanup logic to remove banned words and force a single line
+    q = sanitize_query(q)
+    
+    # Final check just in case the sanitization left the query completely empty
+    if not q.strip():
+        raise HTTPException(status_code=400, detail="Query is empty after text sanitization.")
+    
     try:
         # Construct pipeline root runtime execution dictionary structure
         initial_state = {
@@ -43,7 +58,6 @@ async def execute_search_assistant_pipeline(q: str = Query(..., description="The
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Graph internal processing execution fault: {str(e)}")
-
 
 # Initialize your decoupled router service instance
 llm_router = LLMRouter()

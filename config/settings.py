@@ -11,7 +11,10 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-4o-mini"
     OLLAMA_MODEL: str = "llama3.2:3b"
 
-    print(OPENAI_API_KEY)
+    # Text Sanitization List
+    # Pydantic v2 parses comma-separated environment strings into a list automatically
+    BANNED_WORDS: list[str] = ["Jio Alert : SPAM\n", "SPAM:", "ALERT:"]
+
     # Pydantic v2 configuration strategy to auto-load local .env files
     model_config = SettingsConfigDict(
         env_file=".env",
