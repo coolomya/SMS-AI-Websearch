@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     APP_TITLE: str = "Async LangGraph Search Assistant"
-    SEARXNG_URL: str = "http://localhost:8080/search"
+    SEARXNG_URL: str = "http://localhost:8080"
     MAX_RETRY_COUNT: int = 3
     
     # LLM Provider Configuration
