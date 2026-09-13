@@ -30,9 +30,6 @@ A backend api built with FastAPI, Python.
 
 A high-level view of how the main pieces fit together:
 
-
-Yes. Here is the **Mermaid version of that exact architecture**, designed to work cleanly in GitHub README:
-
 ```mermaid
 flowchart LR
     Requestor["📱 SMS Requestor"]
