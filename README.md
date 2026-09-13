@@ -17,7 +17,8 @@
 
 ## 📝 Description
 
-SMS-AI-Websearch — a backend api built with FastAPI, Python.
+SMS-AI-Websearch — Purposed for the cell phones without internet access to have websearch access over sms. 
+A backend api built with FastAPI, Python. 
 
 ## 🛠️ Tech Stack
 
