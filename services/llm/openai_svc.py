@@ -103,34 +103,23 @@ class OpenAIService(BaseLLMService):
         token_limit: int,
         temperature: float = 0.3,
     ):
-        """
-        Centralized OpenAI completion call.
-
-        Business logic should call this method instead of
-        client.chat.completions.create() directly.
-        """
+        logger.info(
+            f"🤖 [OpenAI Request] Model={self.model} | "
+            f"TokenLimit={token_limit} | "
+            f"Capabilities={self.capabilities}"
+        )
 
         request = {
             "model": self.model,
             "messages": messages,
-
-            # Automatically becomes either:
-            #
-            # max_tokens=60
-            #
-            # OR
-            #
-            # max_completion_tokens=60
-            #
             **self._get_token_limit_param(token_limit),
         }
-
-        # Some model families may not support temperature.
+        
         if self.capabilities.get("supports_temperature", True):
             request["temperature"] = temperature
 
         return await self.client.chat.completions.create(**request)
-
+    
     # ============================================================
     # SMS GENERATION
     # ============================================================
