@@ -5,6 +5,7 @@ from config.settings import settings
 
 logger = logging.getLogger("search_assistant")
 
+MAX_SEARCH_RESULT_RETURN_COUNT=17
 
 class SearXNGClient:
     def __init__(self):
@@ -102,7 +103,7 @@ class SearXNGClient:
 
                 snippets = []
 
-                for result in results[:5]:
+                for result in results[:MAX_SEARCH_RESULT_RETURN_COUNT]:
                     title = result.get("title", "").strip()
                     content = result.get("content", "").strip()
 

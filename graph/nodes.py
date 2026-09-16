@@ -19,7 +19,7 @@ async def query_searXNG_node(state: GraphState) -> dict:
     
     logger.info(
         f"\n--- 🔍 INTERMEDIATE DATA: SearXNG Content (Attempt {current_retry + 1}) ---\n"
-        f"{combined_context[:500]}...\n"
+        f"{combined_context}...\n"
         f"----------------------------------------------------------------------"
     )
     return {
