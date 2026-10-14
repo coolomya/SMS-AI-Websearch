@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from graph.workflow import compiled_graph
 from config.settings import settings 
 from services.llm.router import LLMRouter
+from services.commands_service import CommandsService
 from pydantic import BaseModel
 import logging
 
@@ -10,9 +11,12 @@ logger = logging.getLogger("search_assistant")
 
 router = APIRouter()
 
+# Initialize your decoupled service instances
+llm_router = LLMRouter()
+commands_service = CommandsService()
+
 def sanitize_query(text: str) -> str:
     """Removes blacklisted words and condenses multiple lines into a single line."""
-    # Use the active configuration parameters
     for word in settings.BANNED_WORDS:
         text = text.replace(word, "")
     
@@ -30,6 +34,23 @@ async def execute_search_assistant_pipeline(q: str = Query(..., description="The
     # Final check just in case the sanitization left the query completely empty
     if not q.strip():
         raise HTTPException(status_code=400, detail="Query is empty after text sanitization.")
+    print(q)
+    # 1. Check if query triggers a registered command service (bypasses graph if matched)
+    command_sms_output = await commands_service.process_command(q)
+    if command_sms_output:
+        content = {
+            "status": "success",
+            "query": q,
+            "sms_response": command_sms_output,
+            "metrics": {
+                "search_retries": 0,
+                "llm_retries": 0,
+                "total_prompt_tokens": 0,
+                "total_completion_tokens": 0
+            }
+        }
+        logger.info(f"Responding (Command Execution): {content}")
+        return JSONResponse(content)
     
     try:
         # Construct pipeline root runtime execution dictionary structure
@@ -45,26 +66,21 @@ async def execute_search_assistant_pipeline(q: str = Query(..., description="The
         
         # Stream or invoke asynchronous execution through the engine graph layout
         final_state = await compiled_graph.ainvoke(initial_state)
-        content={
-                        "status": "success",
-                        "query": final_state["query"],
-                        "sms_response": final_state["sms_output"],
-                        "metrics": {
-                            "search_retries": final_state["search_retry_count"],
-                            "llm_retries": final_state["llm_retry_count"],
-                            "total_prompt_tokens": final_state["total_prompt_tokens"],
-                            "total_completion_tokens": final_state["total_completion_tokens"]
-                        }
-                    }
+        content = {
+            "status": "success",
+            "query": final_state["query"],
+            "sms_response": final_state["sms_output"],
+            "metrics": {
+                "search_retries": final_state["search_retry_count"],
+                "llm_retries": final_state["llm_retry_count"],
+                "total_prompt_tokens": final_state["total_prompt_tokens"],
+                "total_completion_tokens": final_state["total_completion_tokens"]
+            }
+        }
         logger.info(f"Responding : {content}")
-        return JSONResponse(
-            content
-        )
+        return JSONResponse(content)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Graph internal processing execution fault: {str(e)}")
-
-# Initialize your decoupled router service instance
-llm_router = LLMRouter()
 
 class LLMTestPayload(BaseModel):
     query: str
