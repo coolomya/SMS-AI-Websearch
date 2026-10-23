@@ -19,6 +19,7 @@
 
 SMS-AI-Websearch — Purposed for the cell phones without internet access to have websearch access over sms. 
 A backend api built with FastAPI, Python. 
+Also supports built-in SMS commands (e.g. temp home) that are handled locally and bypass the LLM/search pipeline for instant replies. Commands are registered in services/commands_service.py and are easily extensible.
 
 ## 🛠️ Tech Stack
 
@@ -40,6 +41,7 @@ flowchart LR
         direction LR
 
         FastAPI["FastAPI"]
+        Commands["CommandsService<br/>(temp home, whois, ...)"]
         LangGraph["LangGraph"]
         SearXNG["SearXNG"]
         Router["LLM Router"]
@@ -47,7 +49,9 @@ flowchart LR
         OpenAI["OpenAI"]
         Ollama["Ollama"]
 
-        FastAPI --> LangGraph
+        FastAPI --> Commands
+        Commands -->|"No match"| LangGraph
+        Commands -->|"Match → direct SMS"| FastAPI
         LangGraph --> SearXNG
         SearXNG --> Router
 
@@ -172,8 +176,9 @@ pydantic_settings: latest
     │   ├── ollama_svc.py
     │   ├── openai_svc.py
     │   └── router.py
-    └── search
-        └── searxng.py
+    ├── search
+    |   └── searxng.py
+    ├── commands_service.py 
 ```
 
 ## 🛠️ Development Setup
@@ -189,6 +194,10 @@ The project can be accessed through an Android phone with a
 working SIM card as a middleware. The Android device uses Automate by LlamaLab to receive
 SMS queries from non-android phone, forward them to the local FastAPI server over the LAN, and
 send the AI-generated response back via SMS.
+
+Built-in SMS commands (no LLM/search required):
+temp home → returns temperature, humidity, dust, and AQI from the configured ThingSpeak channel
+whois <name> → example contact-lookup handler (stub — extend in services/commands_service.py)
 
 For the complete Android/Automate configuration and deployment instructions,
 see **[Android SMS Bridge Setup](docs/ANDROID_SETUP.md)**.
